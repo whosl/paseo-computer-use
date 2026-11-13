@@ -1,8 +1,8 @@
 {
   "id": "computer-use",
   "name": "Computer Use",
-  "description": "Lets coding agents control native macOS apps through typed MCP tools for screenshots, accessibility trees, clicks, typing, and keys.",
+  "description": "Computer use for macOS and Linux/Niri: screenshots, clicks, typing and keys, with accessibility tools on macOS.",
   "requirements": {
-    "paseo": ">=0.12.0"
+    "paseo": ">=0.13.0"
   }
 }

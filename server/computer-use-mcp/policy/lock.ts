@@ -13,6 +13,9 @@ export const LOCK_LOST_MESSAGE =
 
 export interface ControlLockOptions {
   helperPort?: HelperPort;
+  // Linux/Niri has no global Escape hook. Its explicit mode uses Paseo Stop
+  // and abort signals; macOS still requires the physical Escape tap.
+  requireAbortTap?: boolean;
   idleTimeoutMs?: number;
   onOwnerChanged?: (owner: { callerId: string | null; agentId: string | null }) => void;
   // Called when the helper confirms the Escape tap is armed. The owner is
@@ -23,6 +26,7 @@ export interface ControlLockOptions {
 
 export class ControlLock {
   private readonly helperPort?: HelperPort;
+  private readonly requireAbortTap: boolean;
   private readonly idleTimeoutMs: number;
   private readonly onOwnerChanged?: (owner: {
     callerId: string | null;
@@ -47,6 +51,7 @@ export class ControlLock {
 
   constructor(options: ControlLockOptions = {}) {
     this.helperPort = options.helperPort;
+    this.requireAbortTap = options.requireAbortTap ?? true;
     this.idleTimeoutMs = options.idleTimeoutMs ?? 60_000;
     this.onOwnerChanged = options.onOwnerChanged;
     this.onAbortTapArmed = options.onAbortTapArmed;
@@ -173,6 +178,7 @@ export class ControlLock {
   }
 
   private async armAbortTap(): Promise<boolean> {
+    if (!this.requireAbortTap) return true;
     if (!this.helperPort || this.abortTapArmed) {
       return true;
     }

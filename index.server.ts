@@ -12,6 +12,8 @@ import { createComputerUseService } from "./server/computer-use-mcp";
 import { buildHelperBinary } from "./server/computer-use-mcp/helper/build";
 import { installMcpShim } from "./server/computer-use-mcp/helper/install-shim";
 import { HelperProcess } from "./server/computer-use-mcp/helper/process";
+import { NiriPort } from "./server/computer-use-mcp/linux/niri-port";
+import type { HelperPort } from "./server/computer-use-mcp/contract/helper-port";
 import { ClientIdentityStore } from "./server/paseo/identity-store";
 import { addComputerUseServer } from "./server/paseo/inject";
 import { registerComputerUseRpcHandlers } from "./server/paseo/rpc-handlers";
@@ -107,9 +109,14 @@ export default function contribute(server: PluginServerContext) {
   // The host only notifies subscribers on change, so read once for the initial
   // value. An invalid stored value keeps the last good settings (defaults at start).
   let currentSettings: ComputerUseSettingsValues = computerUseSettingsSchema.parse({});
+  let stopWhenDisabled: (() => Promise<unknown>) | undefined;
   let receivedSettingsChange = false;
   const applySettings = (state: PluginSettingsState<typeof computerUseSettingsSchema>) => {
-    if (state.status === "ready") currentSettings = state.values;
+    if (state.status === "ready") {
+      const wasEnabled = currentSettings.enabled;
+      currentSettings = state.values;
+      if (wasEnabled && !currentSettings.enabled) void stopWhenDisabled?.();
+    }
   };
   const unsubscribeSettings = settingsHandle.subscribe((state) => {
     receivedSettingsChange = true;
@@ -150,12 +157,15 @@ export default function contribute(server: PluginServerContext) {
         helperBuildState = "failed";
         helperBuildError = err instanceof Error ? err.message : String(err);
       });
+  } else if (process.platform === "linux") {
+    // Niri uses native Wayland capture/input; there is no Swift build.
+    helperBuildState = "ready";
   } else {
     helperBuildState = "failed";
     helperBuildError = `Unsupported platform: ${process.platform}`;
   }
 
-  const helperProcess = new HelperProcess({
+  const helperProcess: HelperPort = process.platform === "linux" ? new NiriPort() : new HelperProcess({
     resolveBinary: async () => {
       if (compiledBinaryPath) return compiledBinaryPath;
       try {
@@ -177,7 +187,8 @@ export default function contribute(server: PluginServerContext) {
   const service = createComputerUseService({
     helperPort: helperProcess,
     socketPath,
-    platformSupported: process.platform === "darwin",
+    platformSupported: process.platform === "darwin" || process.platform === "linux",
+    target: process.platform === "linux" ? "linux" : "mac",
     getSettings: () => currentSettings,
     getHelperBuildStatus: () => ({
       state: helperBuildState,
@@ -185,6 +196,7 @@ export default function contribute(server: PluginServerContext) {
     }),
     resolveAgentId: (callerId) => identityStore.resolveAgentId(callerId),
   });
+  stopWhenDisabled = () => service.stopControl();
 
   let socketError: string | null = null;
   void service.start().catch((err: unknown) => {
@@ -242,9 +254,9 @@ export default function contribute(server: PluginServerContext) {
     await service.onAgentClosed(event.agent.id);
   });
 
-  return () => {
-    void unsubscribeSettings();
-    void service.stop();
-    void helperProcess.stop();
+  return async () => {
+    await unsubscribeSettings();
+    await service.stop();
+    await helperProcess.stop();
   };
 }

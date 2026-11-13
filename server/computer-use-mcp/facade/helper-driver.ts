@@ -99,6 +99,7 @@ function inactiveClickNote(
 
 export interface CreateHelperDriverOptions {
   helperPort: HelperPort;
+  target?: ComputerDriver["target"];
   policy?: PolicyEngineConfig;
   elementIds?: ElementIds;
   actionSettler?: ActionSettler;
@@ -661,7 +662,13 @@ export function createHelperDriver(options: CreateHelperDriverOptions): Computer
   };
 
   return {
-    target: "mac",
+    target: options.target ?? "mac",
+    ...(options.helperPort.focusWindow ? {
+      async focusWindow(params: { app: string; windowId?: number }) {
+        return runWithPolicy("focus_window", params, { mutating: true }, (resolved, { signal }) =>
+          options.helperPort.focusWindow!({ ...resolved, ...blocked() }, { signal }));
+      },
+    } : {}),
     elementIds,
     actionSettler,
 

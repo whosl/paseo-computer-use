@@ -29,14 +29,15 @@ import {
 } from "../shared/settings";
 
 const ENABLE_WARNING =
-  "Computer Use lets agents see and control the apps on this Mac as you: they can read " +
-  "windows, click, type, and press keys in any app that is not on the blocked list. " +
-  "Press Esc or Paseo's Stop button to take control back at once.";
+  "Computer Use lets agents see and control apps on this host as you. " +
+  "Use Paseo's Stop button to take control back. Linux/Niri changes real focus and " +
+  "captures the whole target display; its global Escape hook and accessibility tree are unavailable.";
 
 const BUILTIN_BLOCK_HINT =
   "Keychain Access, Passwords, the login window, the system password prompt, and the " +
   "1Password, Bitwarden, Dashlane, LastPass, NordPass, and Proton Pass apps are always " +
-  "blocked. Add more bundle ids here, separated by commas or new lines.";
+  "blocked. Linux also blocks KeePassXC and Seahorse. Add macOS bundle ids or exact " +
+  "Linux app ids here, separated by commas or new lines.";
 
 const BROWSER_HINT = "Off: agents use Paseo's browser tools for the web.";
 
@@ -170,6 +171,7 @@ function SettingsControls({
   }, [stopControl]);
 
   const helperState = status?.helperBuildState ?? "checking";
+  const linux = status?.platform === "linux";
 
   return (
     <SettingsSection title="Computer Use">
@@ -191,13 +193,27 @@ function SettingsControls({
         <SettingsSelect
           label="Screenshot mode"
           value={settings.values.screenshots}
-          options={screenshotOptions}
+          options={linux ? [
+            { label: "Auto (visual screenshots)", value: "auto" },
+            { label: "Always include screenshot", value: "always" },
+            { label: "Do not send screenshots", value: "never" },
+          ] : screenshotOptions}
           disabled={settings.saving}
           onValueChange={onChangeScreenshots}
         />
       </SettingsCard>
 
-      <SettingsCard>
+      {linux ? (
+        <SettingsCard>
+          <SettingsRow label="Linux/Niri visual backend" hint="Uses real desktop focus and display coordinates. Screenshots include other visible windows. There are no indexed controls, background input, or global Escape/shake hook." />
+          <SettingsRow label="Capture / input" hint="Requires an unlocked Niri session, grim, wayvnc and wl-clipboard. Use Paseo Stop or disable Computer Use to stop an agent." />
+          <SettingsRow label="Backend" error={status?.helperBuildError ?? null}>
+            <Text style={textStyle}>{helperState}</Text>
+          </SettingsRow>
+          {status?.socketError ? <SettingsRow label="Agent connection" error={status.socketError} /> : null}
+          {status?.activeOwner ? <SettingsAction label={`In control: ${status.activeAgentId ?? status.activeOwner}`} actionLabel="Stop" onPress={handleStop} /> : null}
+        </SettingsCard>
+      ) : <SettingsCard>
         <SettingsAction
           label={`Accessibility: ${grantedLabel(status, status?.axTrusted ?? false)}`}
           hint="Grant it to the app that started the Paseo daemon, then quit and reopen that app."
@@ -223,7 +239,7 @@ function SettingsControls({
             onPress={handleStop}
           />
         ) : null}
-      </SettingsCard>
+      </SettingsCard>}
 
       <SettingsCard>
         {SUPPORTED_PROVIDERS.map((provider) => (

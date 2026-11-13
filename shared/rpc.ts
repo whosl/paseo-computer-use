@@ -12,6 +12,7 @@ export const auditEntrySchema = z.object({
 });
 
 export const statusOutputSchema = z.object({
+  platform: z.enum(["mac", "linux", "windows"]).optional(),
   enabled: z.boolean(),
   platformSupported: z.boolean(),
   helperBuildState: z.enum(["idle", "building", "ready", "failed"]),

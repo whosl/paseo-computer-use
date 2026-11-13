@@ -1,6 +1,6 @@
 {
-  "name": "@kevinle128/computer-use",
-  "version": "0.2.0",
+  "name": "@whosl/paseo-computer-use",
+  "version": "0.3.0-niri.1",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -8,20 +8,22 @@
     "embed:helper": "node scripts/embed-helper.mjs",
     "typecheck": "node scripts/embed-helper.mjs && tsc --noEmit",
     "test": "vitest run",
+    "test:niri": "tsx scripts/niri-smoke.ts",
     "test:swift": "swift test --package-path native/macos",
     "lint": "oxlint"
   },
   "devDependencies": {
-    "@getpaseo/client": "file:../paseo/packages/client",
-    "@getpaseo/plugin": "file:../paseo/packages/plugin",
-    "@getpaseo/protocol": "file:../paseo/packages/protocol",
+    "@getpaseo/client": "0.13.0",
+    "@getpaseo/plugin": "0.13.0",
+    "@getpaseo/protocol": "0.13.0",
     "@modelcontextprotocol/sdk": "1.29.0",
     "@types/node": "^20.9.0",
     "@types/react": "~19.2.0",
     "oxlint": "1.61.0",
-    "react": "19.2.3",
-    "react-native": "0.86.3",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
     "typescript": "^5.9.3",
+    "tsx": "^4.20.0",
     "vitest": "^4.1.6",
     "zod": "4.4.3"
   }

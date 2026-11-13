@@ -5,6 +5,12 @@ import type {
 } from "./helper-protocol";
 
 export interface HelperPort {
+  // Visual backends may need to focus a real window before sending input.
+  // macOS does not expose this operation and keeps its background behavior.
+  focusWindow?(
+    params: { app: string; windowId?: number; blockedBundleIds: string[]; blockedBundleIdPrefixes?: string[] },
+    options?: { signal?: AbortSignal },
+  ): Promise<import("./results").ActionExecutionResult>;
   request<K extends HelperCommandName>(
     cmd: K,
     params: HelperCommands[K]["params"],

@@ -1,4 +1,5 @@
 node_modules/
+artifacts/
 .DS_Store
 native/macos/.build/
 native/macos/.swiftpm/

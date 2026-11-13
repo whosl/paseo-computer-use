@@ -46,6 +46,7 @@ export interface ComputerUseRuntimeSettings {
 }
 
 export interface ComputerUseServiceStatus {
+  platform?: "mac" | "linux" | "windows";
   enabled: boolean;
   platformSupported: boolean;
   helperBuildState: "idle" | "building" | "ready" | "failed";
@@ -62,6 +63,7 @@ export interface ComputerUseServiceStatus {
 
 export interface CreateComputerUseServiceDeps {
   helperPort: HelperPort;
+  target?: "mac" | "linux" | "windows";
   socketPath?: string;
   platformSupported?: boolean;
   idleLockTimeoutMs?: number;
@@ -190,6 +192,7 @@ export function createComputerUseService(
 
   const controlLock = new ControlLock({
     helperPort: deps.helperPort,
+    requireAbortTap: deps.target !== "linux",
     idleTimeoutMs,
     onOwnerChanged: (owner) => {
       if (owner.callerId === null) {
@@ -256,6 +259,7 @@ export function createComputerUseService(
     }
     const driver = createHelperDriver({
       helperPort: deps.helperPort,
+      target: deps.target,
       policy,
       elementIds: new ElementIds(),
       actionSettler: new ActionSettler(deps.postActionSleepMs ?? 100),
@@ -293,14 +297,19 @@ export function createComputerUseService(
         abortTapAvailable = helperStatus.abortTapAvailable;
         inputSourceId = helperStatus.inputSourceId || null;
         isInputMethod = helperStatus.isInputMethod;
-      } catch {
+      } catch (error) {
         // Helper not running or unreachable; report default false flags
+        if (deps.target === "linux") {
+          buildStatus.state = "failed";
+          buildStatus.error = error instanceof Error ? error.message : String(error);
+        }
       }
     }
 
     const owner = controlLock.getActiveOwner();
 
     return {
+      ...(deps.target ? { platform: deps.target } : {}),
       enabled: settings.enabled,
       platformSupported,
       helperBuildState: buildStatus.state,

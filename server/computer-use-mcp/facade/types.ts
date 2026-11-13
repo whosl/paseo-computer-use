@@ -29,6 +29,7 @@ export interface DriverAppState {
 
 export interface ComputerDriver {
   readonly target: "mac" | "linux" | "windows";
+  focusWindow?(params: { app: string; windowId?: number }): Promise<ActionExecutionResult>;
   listApps(): Promise<AppDescriptor[]>;
   listWindows(params?: { app?: string }): Promise<WindowDescriptor[]>;
   getAppState(params: {

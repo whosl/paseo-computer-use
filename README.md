@@ -1,5 +1,60 @@
 # Computer Use for Paseo
 
+This fork adds a **Linux/Niri visual backend** alongside the original macOS
+backend. Windows and other Linux compositors are not implemented in this version.
+
+## Linux/Niri
+
+Requires Paseo 0.13 or later, Node 22, an unlocked Niri graphical session,
+`grim`, `wayvnc`, `wayvncctl`, and `wl-copy`/`wl-paste`. The session must publish
+`NIRI_SOCKET` and `WAYLAND_DISPLAY` in the systemd user environment. No Swift,
+sudo, new TCP port, or Host screen plugin is needed.
+
+```sh
+paseo plugin install git:whosl/paseo-computer-use --ref feat/linux-windows-support
+```
+
+Enable **Settings → Computer Use**, then create a new Claude, Codex or Oh My Pi
+agent. Existing agents retain their original MCP configuration. The tools are
+`status`, `list_apps`, `list_windows`, `focus_window`, `get_app_state`, `click`,
+`drag`, `scroll`, `press_key`, `type_text`, `paste_text`, and `wait_for`.
+
+Use exact app ids from `list_apps`. Call `focus_window`, then `get_app_state`,
+then act and examine the returned screenshot. Captures cover the **whole target
+display**, including other visible windows. Coordinates are display-local logical
+points: divide image pixels by the reported scale. Fractional scaling and
+nonzero or negative display origins are supported.
+
+Niri changes real desktop focus and moves the real pointer. Input is refused if
+the target loses focus, closes, or the session locks. The one-agent control lock,
+host enable switch, provider approval mode, blocked-app policy, turn cleanup and
+Paseo Stop remain available. **Global Escape/shake stop, virtual overlay,
+same-window human activity pause, background input and an accessibility tree
+remain macOS-only.** There are no element indexes or AX editing tools on Niri.
+`wait_for` supports visual and window conditions, not UI text matching.
+
+Unicode uses plain-text clipboard paste. Previous plain text is restored unless
+the user copied something newer; a non-text clipboard is refused before replacement.
+Rich clipboard formats and clipboard-manager history are not preserved. Password
+managers (including KeePassXC and Seahorse) and configured app ids are blocked.
+Captures are refused when a blocked app shares the visible workspace. Browsers
+stay disabled until explicitly allowed. Screenshots and tool text reach the
+agent's model provider; the plugin does not silently save screenshots.
+
+```sh
+npm install
+npm run typecheck
+npm run lint
+npm test
+# Optional real MCP test in a disposable GTK window on an empty workspace:
+PASEO_CU_RUN_LIVE=1 npm run test:niri
+```
+
+The opt-in test needs Python 3 / PyGObject / GTK 3, restores the original desktop
+focus, and writes a fixture-only screenshot under ignored `artifacts/`.
+
+## Original macOS backend
+
 A Paseo plugin that lets coding agents use native macOS apps. Agents get typed MCP tools:
 they read an app's accessibility tree, act on a named element (click, type, scroll, press a
 key), and get the new state back to check the result. A small Swift helper does the macOS
